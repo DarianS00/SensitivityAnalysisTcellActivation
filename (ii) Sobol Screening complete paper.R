@@ -1,5 +1,3 @@
-# WORKS PERFECTLY!
-
 library(deSolve) #version 1.40
 library(doParallel) #version 1.0.17
 library(foreach) #version 1.5.2
@@ -423,3 +421,4 @@ output_text <- paste("Stability of parameters achieved for number of samples:\n"
                            stability_summary$Stable_N, "samples", sep=" ", collapse="\n"))
 
 cat(output_text)
+
