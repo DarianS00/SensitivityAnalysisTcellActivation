@@ -1,6 +1,6 @@
 Supplementary material for the CPT PSP article:
 
-Model-informed Guidance for Target Selection Strategies based on Global Sensitivity Analysis of T-Cell Activation and Cytokine Release
+#### Model-informed Guidance for Target Selection Strategies based on Global Sensitivity Analysis of T-Cell Activation and Cytokine Release
 
 Authors: Darian Elia Tennessee Schirr<sup>1,2</sup>, Jan-Erik Busse<sup>1</sup>, Andreas Reichel<sup>1</sup>
 
