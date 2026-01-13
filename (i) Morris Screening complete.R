@@ -1,5 +1,3 @@
-# WORKS PERFECTLY!
-
 library(deSolve) #version 1.40
 library(ggplot2) #version 3.5.1
 library(ggtext) #version 0.1.2
@@ -552,3 +550,4 @@ check_stability_relative_extended_middle <- function(results, relative_threshold
 
 stable_trajectory_number_relative_extended_middle <- check_stability_relative_extended_middle(results)
 stable_trajectory_number_relative_extended_middle
+
