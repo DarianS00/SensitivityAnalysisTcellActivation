@@ -100,7 +100,7 @@ ui <- {fluidPage(
           inputId = "my",
           label = HTML('<span style="font-size: 14px;">k<sub>inh</sub>:</span>'),
           grid = TRUE,
-          choices = c("N/A",seq(100,1000,100),seq(1000,10000,1000),seq(10000,100000,10000),seq(100000,1000000,100000)),
+          choices = c("N/A",seq(1,10,1),seq(10,100,10),seq(100,1000,100),seq(1000,10000,1000),seq(10000,100000,10000),seq(100000,1000000,100000)),
           selected = initial_values$my
         )),
         column(3, numericInput(
@@ -114,7 +114,7 @@ ui <- {fluidPage(
           inputId = "kon",
           label = HTML('<span style="font-size: 14px;">k<sub>on</sub>:</span>'),
           grid = TRUE,
-          choices = c("N/A",seq(0.01,0.1,0.01),seq(0.1,1,0.1),seq(1,10,1),seq(10,100,10)),
+          choices = c("N/A",seq(0.0001,0.001,0.0001),seq(0.001,0.01,0.001),seq(0.01,0.1,0.01),seq(0.1,1,0.1),seq(1,10,1),seq(10,100,10)),
           selected = initial_values$kon
         )),
         column(3, numericInput(
@@ -142,7 +142,7 @@ ui <- {fluidPage(
           inputId = "kp",
           label = HTML('<span style="font-size: 14px;">k<sub>p</sub>:</span>'),
           grid = TRUE,
-          choices = c("N/A",seq(1,10,1),seq(10,100,10)),
+          choices = c("N/A",seq(0.0001,0.001,0.0001),seq(0.001,0.01,0.001),seq(0.01,0.1,0.01),seq(0.1,1,0.1),seq(1,10,1),seq(10,100,10)),
           selected = initial_values$kp
         )),
         column(3, numericInput(
@@ -852,6 +852,7 @@ server <- function(input,output,session) {
 
 #3 server call to action ----
 shinyApp(ui = ui, server = server)
+
 
 
 
