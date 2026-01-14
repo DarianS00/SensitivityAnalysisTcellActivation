@@ -215,7 +215,7 @@ ui <- {fluidPage(
           plotlyOutput("graph"),
           div(style = "height: 20px;"),  #adding some space between plot and model pic etc.
           fluidRow(
-            column(width = 4, class = "col-sm-4 col-md-4 col-lg-4", tags$img(src = "ModelTCA.png", class = "img-responsive", style = "border: 3px solid black; padding: 0px; max-width: 100%; height: auto;")
+            column(width = 4, class = "col-sm-4 col-md-4 col-lg-4", tags$img(src = "ModelTCA.png", class = "img-responsive", style = "border: 3px white; padding: 0px; max-width: 100%; height: auto;")
             ),
             column(width = 5, class = "col-sm-5 col-md-5 col-lg-5",  
                    p("In vitro activation of T cells can be described by the model of kinetic proofreading with limited signaling and an incoherent feed-forward loop (KPL-IFF) [1]."),
@@ -848,5 +848,6 @@ server <- function(input,output,session) {
 
 #3 server call to action ----
 shinyApp(ui = ui, server = server)
+
 
 
