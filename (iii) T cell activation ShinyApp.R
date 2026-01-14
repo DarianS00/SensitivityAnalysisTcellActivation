@@ -10,6 +10,7 @@ library(digest)               #Version 0.6.37
 library(shinyjs)              #Version 2.1.0
 library(openxlsx)             #Version 4.2.8
 library(png)                  #Version 4.4.2
+library(shinyscreenshot)      #Version 0.2.1
 
 
 
@@ -233,7 +234,8 @@ ui <- {fluidPage(
                      tags$a(href = "https://doi.org/10.1073/pnas.1608820113", "https://doi.org/10.1073/pnas.1608820113"))),
             column(width = 3, class = "col-sm-3 col-md-3 col-lg-3",actionButton("saveruns", "Save Selected Runs", style = "width: 100%; font-size: 0.7vw; margin-bottom: 10px;"), uiOutput("file_list"))
           )
-      )
+      ),
+      actionButton("Screenshot","Screenshot")
     )
     
   ))} 
@@ -841,13 +843,16 @@ server <- function(input,output,session) {
     file.remove(results_files)
   })
   
-  
+  observeEvent(input$., {
+    screenshot(scale = 10)
+  })
 }
 
 
 
 #3 server call to action ----
 shinyApp(ui = ui, server = server)
+
 
 
 
