@@ -51,8 +51,7 @@ ui <- {fluidPage(
   theme = shinytheme("simplex"),
   sidebarLayout(
     sidebarPanel(
-      chooseSliderSkin(skin = "Flat",
-                       color = "LightSeaGreen"),
+      chooseSliderSkin(skin = "Flat"),
       fluidRow( 
         column(9, sliderTextInput(
           inputId = "phi",
@@ -216,9 +215,12 @@ ui <- {fluidPage(
           plotlyOutput("graph"),
           div(style = "height: 20px;"),  #adding some space between plot and model pic etc.
           fluidRow(
-            column(width = 4, class = "col-sm-4 col-md-4 col-lg-4", tags$img(src = "ModelTCA.png", class = "img-responsive", style = "border: 3px white; padding: 0px; max-width: 100%; height: auto;")
+            column(width = 4, class = "col-sm-4 col-md-4 col-lg-4", tags$img(src = "ModelTCA.png", class = "img-responsive", style = "border: 3px white; padding: 0px; max-width: 155%; height: auto;"),
+                   div(style = "height: 10px;"),
+                   actionButton("Screenshot", "Screenshot",
+                                style = "width: 155%; font-size: 0.7vw;")
             ),
-            column(width = 5, class = "col-sm-5 col-md-5 col-lg-5",  
+            column(width = 3, offset = 2,
                    p("In vitro activation of T cells can be described by the model of kinetic proofreading with limited signaling and an incoherent feed-forward loop (KPL-IFF) [1]."),
                    p(HTML("k<sub>lim</sub>: limited signaling parameter")),
                    p(HTML("k<sub>amp</sub>, k<sub>act</sub>, k<sub>inh</sub>: loop variables")),
@@ -234,8 +236,7 @@ ui <- {fluidPage(
                      tags$a(href = "https://doi.org/10.1073/pnas.1608820113", "https://doi.org/10.1073/pnas.1608820113"))),
             column(width = 3, class = "col-sm-3 col-md-3 col-lg-3",actionButton("saveruns", "Save Selected Runs", style = "width: 100%; font-size: 0.7vw; margin-bottom: 10px;"), uiOutput("file_list"))
           )
-      ),
-      actionButton("Screenshot","Screenshot")
+      )
     )
     
   ))} 
@@ -843,6 +844,61 @@ server <- function(input,output,session) {
     file.remove(results_files)
   })
   
+  
+  
+  
+  # slider color
+  css_color <- "#20B2AA"
+  
+  session$onFlushed(function() {
+    insertUI(
+      selector = "head", where = "beforeEnd",
+      ui = tags$style(HTML(sprintf("
+      /* Make handle fully invisible, but still clickable/draggable */
+      .irs--flat .irs-handle {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        opacity: 0 !important;           /* invisible */
+      }
+      .irs--flat .irs-handle.state_hover,
+      .irs--flat .irs-handle:hover {
+        opacity: 0 !important;           /* remain invisible on hover */
+      }
+      .irs--flat .irs-handle > i {
+        display: none !important;        /* hide stripes */
+      }
+
+      /* Bar & edge in turquoise */
+      .irs--flat .irs-bar,
+      .irs--flat .irs-bar-edge {
+        background-color: %s !important;
+        border-color: %s !important;
+      }
+
+      /* Tooltip bubbles in turquoise with white text */
+      .irs--flat .irs-single,
+      .irs--flat .irs-from,
+      .irs--flat .irs-to {
+        background-color: %s !important;
+        border-color: %s !important;
+        color: #fff !important;
+      }
+
+      /* Tooltip pointer triangle (make it turquoise) */
+      .irs--flat .irs-single:before,
+      .irs--flat .irs-from:before,
+      .irs--flat .irs-to:before {
+        border-top-color: %s !important;
+      }
+
+      /* Base line neutral */
+      .irs--flat .irs-line { background-color: #eaeaea !important; }
+    ", css_color, css_color, css_color, css_color, css_color)))
+    )
+  }, once = TRUE)
+  
+  
   observeEvent(input$Screenshot, {
     screenshot(scale = 10)
   })
@@ -852,9 +908,4 @@ server <- function(input,output,session) {
 
 #3 server call to action ----
 shinyApp(ui = ui, server = server)
-
-
-
-
-
 
