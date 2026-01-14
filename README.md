@@ -17,7 +17,8 @@ Affiliations:
 #### (ii) Complete Sobol analysis code for the T-cell activation model 
 
 #### (iii) Shiny app code for the T-cell activation
-Explore parameter interdependencies through dose-response curves by simultaneous adjustment of multiple parameters
+Explore parameter interdependencies through dose-response curves by simultaneous adjustment of multiple parameters.
+To display pictures, download www folder with both png files and place in the same directory as the Shiny app code
 
 ## License 
 This project is licensed under the terms of GPLv3.
