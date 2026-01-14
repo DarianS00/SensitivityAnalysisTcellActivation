@@ -843,7 +843,7 @@ server <- function(input,output,session) {
     file.remove(results_files)
   })
   
-  observeEvent(input$., {
+  observeEvent(input$Screenshot, {
     screenshot(scale = 10)
   })
 }
@@ -852,6 +852,7 @@ server <- function(input,output,session) {
 
 #3 server call to action ----
 shinyApp(ui = ui, server = server)
+
 
 
 
