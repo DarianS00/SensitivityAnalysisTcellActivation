@@ -1,7 +1,6 @@
 Supplementary material for the article:
 
-#### Model-informed Guidance for Target Selection Strategies based on Global Sensitivity Analysis of T-Cell Activation and Cytokine Release
-
+#### Global and Local Sensitivity Analysis of a Minimal T-Cell Activation Model to Inform Experimental Design for Cytokine Release
 Authors: Darian Elia Tennessee Schirr<sup>1,2</sup>, Jan-Erik Busse<sup>1</sup>, Andreas Reichel<sup>1</sup>
 
 Affiliations: 
