@@ -1,0 +1,227 @@
+library(ggplot2)  #version 3.5.1
+library(ggtext)   #version 0.1.2
+library(svglite)  #version 2.2.2
+
+#### Local sensitivity analysis: direction of parameter effects ----
+#  This script determines at one operating point (baseline, Table S1)
+#   (1) how each parameter alone changes the observed endpoint and in which direction, and
+#   (2) how the highest-ranked D_ij pairs jointly change the observed endpoint.
+#
+
+#
+# Assumptions (please state them in Methods/Supplement)
+#   A1  Baseline = Table S1. k_act and M_max enter only as product: deltaYmax = 5e4 * 10 = 5e5.
+#   A2  Fixed rates as in the GSA code: k+M = k+E = 100, k-M = k-E = 50000, E_max = 100.
+#   A3  Perturbation factors 1/10, 1/3, 3, 10. A tenfold reduction is interpreted as 90 % inhibition,
+#       which assumes that the rate scales proportionally with the active amount of the targeted species.
+#   A4  One-at-a-time: all other parameters remain at baseline. Results describe ONE operating point
+#       and are not general statements over the parameter space.
+
+
+# parameters in the code are named differently than in paper, compare to Lever et al. 2016 cited in paper
+# for updated parameter names, please refer to "new_parameter_names"
+
+#### Model functions ----
+
+# analytical steady state of the Lever model
+# total complex C = C0 + C1 + C2 solves C = K * (L0 - C) * (R0 - C); disc = discriminant, s = linear coefficient
+# vectorized over L0
+steady_state_P <- function(params, L0, R0 = 50) {
+  with(as.list(params), {
+    yYgen <- 100; yYdegr <- 50000; yPgen <- 100; yPdegr <- 50000; Pmax <- 100
+    a  <- kon / (koff + kp)
+    b  <- kp / (koff + phi * kp)
+    c2 <- phi * kp / koff
+    K  <- a * (1 + b + b * c2)
+    s    <- K * (L0 + R0) + 1
+    disc <- (K * (L0 - R0))^2 + 2 * K * (L0 + R0) + 1   # = s^2 - 4*K^2*L0*R0, always > 0
+    C    <- 2 * K * L0 * R0 / (s + sqrt(disc))
+    C1 <- b * C / (1 + b + b * c2)
+    m  <- (yYgen + lambda * C1) / (yYgen + yYdegr + lambda * C1)   # m = M / M_max
+    P  <- (yPgen + deltaYmax * m) * Pmax / (yPgen + yPdegr + deltaYmax * m + my * C1)
+    unname(P)
+  })
+}
+
+# maximum of the steady-state dose-response curve over L in [1e-4, 1e4], R0 = 50
+# coarse grid followed by local refinement with optimize()
+logL_grid <- seq(-4, 4, by = 0.1)
+max_P_over_L <- function(params, R0 = 50) {
+  P_grid <- steady_state_P(params, L0 = 10^logL_grid, R0 = R0)
+  j <- which.max(P_grid)
+  if (j == 1 || j == length(logL_grid)) {
+    return(c(P_max = P_grid[j], logL_opt = logL_grid[j], at_bound = 1))
+  }
+  opt <- optimize(function(x) steady_state_P(params, L0 = 10^x, R0 = R0),
+                  interval = logL_grid[c(j - 1, j + 1)], maximum = TRUE, tol = 1e-8)
+  c(P_max = opt$objective, logL_opt = opt$maximum, at_bound = 0)
+}
+
+#### Settings ----
+
+# baseline operating point (Table S1), deltaYmax = k_act * M_max
+baseline <- c(kon = 1, koff = 1, kp = 50, phi = 0.01,
+              lambda = 1e5, my = 5e4, deltaYmax = 5e4 * 10)
+
+# perturbation factors for single parameters and 5 x 5 grid (grid includes the baseline factor 1)
+oat_factors   <- c(1/10, 1/3, 3, 10)
+grid_factors  <- c(1/10, 1/3, 1, 3, 10)
+factor_labels <- c("1/10", "1/3", "1", "3", "10")   # same order as grid_factors
+
+# highest-ranked pairs from the Sobol D_ij analysis (first element = x-axis, second = y-axis)
+pairs_local <- list(c("lambda", "deltaYmax"),
+                    c("kp",     "deltaYmax"),
+                    c("koff",   "kp"),
+                    c("koff",   "deltaYmax"))
+
+# new parameter names
+new_parameter_names <- c("kon"       = "k<sub>on</sub>",
+                         "koff"      = "k<sub>off</sub>",
+                         "kp"        = "k<sub>p</sub>",
+                         "phi"       = "k<sub>lim</sub>",
+                         "lambda"    = "k<sub>amp</sub>",
+                         "deltaYmax" = "k<sub>act</sub>·M<sub>max</sub>",
+                         "my"        = "k<sub>inh</sub>")
+
+#### Baseline readout ----
+
+ref <- max_P_over_L(baseline)
+Y0  <- ref[["P_max"]]
+# the local analysis is only interpretable if the baseline maximum lies inside the ligand range
+stopifnot(is.finite(Y0), ref[["at_bound"]] == 0)
+
+# relative readout r = Y / Y0 after multiplying the named parameters by the given factors,
+# all other parameters stay at baseline; e.g. ratio(c(lambda = 0.1, deltaYmax = 10))
+ratio <- function(factors) {
+  pert <- baseline
+  pert[names(factors)] <- pert[names(factors)] * factors
+  max_P_over_L(pert)[["P_max"]] / Y0
+}
+
+# potency shift dlogL = log10 L - log10 L_0 (decades) after multiplying the named parameters by the given factors
+shift <- function(factors) {
+  pert <- baseline
+  pert[names(factors)] <- pert[names(factors)] * factors
+  max_P_over_L(pert)[["logL_opt"]] - ref[["logL_opt"]]
+}
+
+
+
+#### Part 1: single parameters (one-at-a-time) ----
+
+# every parameter is multiplied by each factor while all others stay at baseline
+oat <- expand.grid(Parameter = names(baseline), Factor = oat_factors, stringsAsFactors = FALSE)
+oat$Ratio <- mapply(function(p, f) ratio(setNames(f, p)), oat$Parameter, oat$Factor)
+oat$dlogL <- mapply(function(p, f) shift(setNames(f, p)), oat$Parameter, oat$Factor)
+
+effect_size <- tapply(abs(log(oat$Ratio)), oat$Parameter, max)
+oat$Label   <- factor(new_parameter_names[oat$Parameter],
+                      levels = new_parameter_names[names(sort(effect_size))])
+oat$Factor  <- factor(factor_labels[match(oat$Factor, grid_factors)], levels = c("1/10", "1/3", "3", "10"))
+
+# efficacy plot: relative amplitude; left = lower efficacy, right = higher efficacy
+p_single <- ggplot(oat, aes(x = Ratio, y = Label, color = Factor)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  geom_point(size = 4, alpha = 0.9) +
+  annotate("text", x = c(0.3, 2), y = Inf, vjust = 1.5, hjust = c(0, 1),
+           label = c("\u2190 lower efficacy", "higher efficacy \u2192"), size = 5, color = "grey30") +
+  scale_x_log10(limits = c(0.3, 2),
+                breaks = c(0.3, 0.5, 1, 1.5, 2)) +
+  scale_y_discrete(expand = expansion(add = c(0.6, 1.2))) +   # space for the labels at the top
+  scale_color_manual(values = c("1/10" = "#542788", "1/3" = "#998ec3",
+                       "3"    = "#f1a340", "10"  = "#b35806"),
+                     name = "Perturbation factor") +
+  labs(x = "Relative amplitude Y / Y<sub>0</sub>", y = "") +
+  theme_light() +
+  theme(axis.text.y  = element_markdown(size = 16),
+        axis.text.x  = element_text(size = 14),
+        axis.title.x = element_markdown(size = 16),
+        legend.title = element_text(size = 14),
+        legend.text  = element_text(size = 14))
+print(p_single)
+
+# potency plot: shift of the ligand amount at the maximum (decades), same layout and order as the efficacy plot
+# left (< 0) = less ligand required = higher potency, right (> 0) = lower potency
+p_single_potency <- ggplot(oat, aes(x = dlogL, y = Label, color = Factor)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_point(size = 4, alpha = 0.9) +
+  annotate("text", x = c(-0.7, 0.7), y = Inf, vjust = 1.5, hjust = c(0, 1),
+           label = c("\u2190 higher potency", "lower potency \u2192"), size = 5, color = "grey30") +
+  scale_x_continuous(limits = c(-0.7, 0.7),                   # symmetric around 0
+                     breaks = seq(-0.6, 0.6, by = 0.3)) +
+  scale_y_discrete(expand = expansion(add = c(0.6, 1.2))) +
+  scale_color_manual(values = c("1/10" = "#542788", "1/3" = "#998ec3",
+                                "3"    = "#f1a340", "10"  = "#b35806"),
+                     name = "Perturbation factor") +
+  labs(x = "Potency shift \u0394log<sub>10</sub> L", y = "") +
+  theme_light() +
+  theme(axis.text.y  = element_markdown(size = 16),
+        axis.text.x  = element_text(size = 14),
+        axis.title.x = element_markdown(size = 16),
+        legend.title = element_text(size = 14),
+        legend.text  = element_text(size = 14))
+print(p_single_potency)
+
+
+#### Part 2: parameter pairs in a 5 x 5 grid ----
+
+# for each pair: both parameters are multiplied by all combinations of grid_factors
+pair_grid <- do.call(rbind, lapply(pairs_local, function(pr) {
+  g <- expand.grid(f1 = grid_factors, f2 = grid_factors)
+  g$Ratio <- mapply(function(a, b) ratio(setNames(c(a, b), pr)), g$f1, g$f2)
+  g$dlogL <- mapply(function(a, b) shift(setNames(c(a, b), pr)), g$f1, g$f2)
+  g$Pair  <- paste0(new_parameter_names[pr[1]], " (x) × ", new_parameter_names[pr[2]], " (y)")
+  g
+}))
+
+pair_grid$f1_lab <- factor(factor_labels[match(pair_grid$f1, grid_factors)], levels = factor_labels)
+pair_grid$f2_lab <- factor(factor_labels[match(pair_grid$f2, grid_factors)], levels = factor_labels)
+pair_grid$Pair   <- factor(pair_grid$Pair, levels = unique(pair_grid$Pair))
+
+# heatmap: relative amplitude r (1 = baseline)
+p_pair_r <- ggplot(pair_grid, aes(f1_lab, f2_lab, fill = Ratio)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = formatC(Ratio, digits = 2, format = "f")), size = 6.5) +
+  scale_fill_gradient2(low = "#2166ac", mid = "white", high = "#b2182b", midpoint = 1,
+                       name = "Y / Y<sub>0</sub>") +
+  facet_wrap(~ Pair, ncol = 2) +
+  labs(x = "Factor on parameter x", y = "Factor on parameter y") +
+  theme_light() +
+  theme(strip.text       = element_markdown(size = 20, color = "black"),
+        strip.background = element_rect(fill = "grey95"),
+        axis.text        = element_text(size = 22),
+        axis.title       = element_text(size = 22),
+        legend.title     = element_markdown(size = 22),
+        legend.text      = element_text(size = 20),            
+        legend.key.height = unit(2.5, "cm"),                  
+        legend.key.width  = unit(1.2, "cm"), 
+        panel.grid       = element_blank())
+
+# heatmap: potency shift (decades); < 0 = leftward shift = higher potency (red), > 0 = lower potency (blue)
+p_pair_potency <- ggplot(pair_grid, aes(f1_lab, f2_lab, fill = dlogL)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = formatC(round(dlogL, 2) + 0, digits = 2, format = "f")),
+            size = 6.5) +  scale_fill_gradient2(low = "#b2182b", mid = "white", high = "#2166ac", midpoint = 0,
+                       name = "\u0394log<sub>10</sub> L") +
+  facet_wrap(~ Pair, ncol = 2) +
+  labs(x = "Factor on parameter x", y = "Factor on parameter y") +
+  theme_light() +
+  theme(strip.text       = element_markdown(size = 20, color = "black"),
+        strip.background = element_rect(fill = "grey95"),
+        axis.text        = element_text(size = 22),
+        axis.title       = element_text(size = 22),
+        legend.title     = element_markdown(size = 22),
+        legend.text      = element_text(size = 20),            
+        legend.key.height = unit(2.5, "cm"),                  
+        legend.key.width  = unit(1.2, "cm"), 
+        panel.grid       = element_blank())
+
+
+n_pairs <- nlevels(pair_grid$Pair)
+h <- 3.6 * ceiling(n_pairs / 2) + 0.8   
+
+ggsave("pair_amplitude.svg", p_pair_r,
+       device = svglite::svglite, width = 10, height = h, bg = "white")
+
+ggsave("pair_potency.svg", p_pair_potency,
+       device = svglite::svglite, width = 10, height = h, bg = "white")
