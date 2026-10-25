@@ -1,10 +1,10 @@
 library(deSolve)              #Version 1.40
-library(ggplot2)              #Version 3.5.1
+library(ggplot2)              #Version 4.0.3
 library(scales)               #Version 1.3.0
 library(viridis)              #Version 0.6.5
 library(shiny)                #Version 1.10.0
 library(shinyWidgets)         #Version 0.9.0
-library(plotly)               #Version 4.10.4
+library(plotly)               #Version 4.12.1
 library(shinythemes)          #Version 1.2.0
 library(digest)               #Version 0.6.37
 library(shinyjs)              #Version 2.1.0
@@ -208,7 +208,7 @@ ui <- {fluidPage(
     ),
     
     mainPanel(
-      div(style = "border: 4px solid #3D3D3D; padding: 20px;",
+      div(style = "border: 4px solid #3D3D3D; padding: 20px;padding-right: 10px; margin-right: 5px;",
           fluidRow(
             column(8, tags$div(style = "color: #3D3D3D; font-size: 28px; font-weight: bold;", "T-cell activation model")),
             column(4, tags$img(src = "BayerLogo.png", class = "img-responsive", style = "float: right; max-width: 100px; height: auto;"))),
@@ -296,33 +296,35 @@ server <- function(input,output,session) {
       R = R_value
     )
     
-    # Define the ODE system
-    ode_system <- function(t, state, parameters) {
-      with(as.list(c(state, parameters)), {
-        dL <- - L * R * kon + koff * (C0 + C1 + C2)
-        dR <- - L * R * kon + koff * (C0 + C1 + C2)
-        dC0 <- kon * L * R - (koff + kp) * C0
-        dC1 <- kp * C0 - (koff + phi * kp) * C1
-        dC2 <- phi * kp * C1 - koff * C2
-        dY <- yYgen * (Ymax - Y) - yYdegr * Y + lambda * C1 * (Ymax - Y)
-        dP <- yPgen * (Pmax - P) - yPdegr * P + delta * Y * (Pmax - P) - my * C1 * P
-        return(list(c(dL, dR, dC0, dC1, dC2, dY, dP)))
+    # Analytical steady state of the Lever model (identical to the GSA and local SA scripts)
+    # replaces the former ODE integration (deSolve::ode, t = 0:30)
+    # total complex C = C0 + C1 + C2 solves C = K * (L0 - C) * (R0 - C); disc = discriminant, s = linear coefficient
+    # M = Ymax * m with m = M / Ymax, therefore delta and Ymax enter only as the product delta * Ymax
+    # vectorized over L0; L0 and R0 are the total ligand and receptor amounts
+    steady_state_P <- function(params, L0, R0) {
+      with(params, {
+        a  <- kon / (koff + kp)
+        b  <- kp / (koff + phi * kp)
+        c2 <- phi * kp / koff
+        K  <- a * (1 + b + b * c2)
+        s    <- K * (L0 + R0) + 1
+        disc <- (K * (L0 - R0))^2 + 2 * K * (L0 + R0) + 1   # = s^2 - 4*K^2*L0*R0, always > 0
+        C    <- 2 * K * L0 * R0 / (s + sqrt(disc))
+        C1 <- b * C / (1 + b + b * c2)
+        m  <- (yYgen + lambda * C1) / (yYgen + yYdegr + lambda * C1)   # m = M / Ymax
+        P  <- (yPgen + delta * Ymax * m) * Pmax / (yPgen + yPdegr + delta * Ymax * m + my * C1)
+        unname(P)
       })
     }
     
-    
-    # Function to solve ODEs 
-    solve_ode <- function(L_value, params) {
-      
-      initial_state <- c(L = L_value, R = params$R, C0 = 0, C1 = 0, C2 = 0, Y = 0, P = 0)
-      
-      ode_output <- ode(y = initial_state, times = 0:30, func = ode_system, parms = params)
-      last_row <- ode_output[nrow(ode_output), ]
-      return(data.frame(L = L_value, P = last_row["P"]))
+    # Function to calculate the steady-state response for one L value
+    solve_steady_state <- function(L_value, params) {
+      P_value <- steady_state_P(params, L0 = L_value, R0 = params$R)
+      return(data.frame(L = L_value, P = P_value))
     }
     
-    # Solve the ODE system for each L value
-    results <- lapply(L_values, solve_ode, params = parameters)
+    # Calculate the steady state for each L value
+    results <- lapply(L_values, solve_steady_state, params = parameters)
     
     # Combine all results into a single data frame
     results <- do.call(rbind, results)
