@@ -29,6 +29,7 @@ Part 1: Morris indices with 95% confidence intervals (Fig. 2, Fig. S3, Table S3)
 
 #### (ii) Sobol
 Part 1: Si, STi and Dij from 25 Owen-scrambled replicates, with bootstrap-t confidence intervals (Fig. 3). Part 2: STi over sample size (Fig. S4). Part 3: Robustness to sampling ranges and input distributions. Especially part 2 is computationally demanding, it can be skipped to execute part 3.
+
 Table S2 (sensitivity to R(0)) requires a code change: in Part 1 of the Sobol script, set the default R0 = 50 in both steady_state_P() and max_P_over_L() to 1e-3, 0.1, 1, 5e3 or 5e5 and re-run Part 1 once per value (R(0) = 50 is the reference run). STi values and ranks are taken from the printed sobol_table.
 
 #### (iii) Shiny app
