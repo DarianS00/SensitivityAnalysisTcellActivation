@@ -26,7 +26,7 @@ Run each script top to bottom in a fresh R session. Code parts within a script d
 
 #### (i) Part 1: Morris indices with 95% confidence intervals (Fig. 2, Fig. S3, Table S3). Part 2: µ* over trajectories plot (Fig. S2).
 
-#### (ii) Part 1: Si, STi and Dij from 25 Owen-scrambled replicates, with bootstrap-t confidence intervals (Fig. 3). Part 2: STi over sample size (Fig. S4). Part 3: Robustness to sampling ranges and input distributions. Especially part 2 is computationally demanding, it can also be skipped to execute part 3.
+#### (ii) Part 1: Si, STi and Dij from 25 Owen-scrambled replicates, with bootstrap-t confidence intervals (Fig. 3). Part 2: STi over sample size (Fig. S4). Part 3: Robustness to sampling ranges and input distributions. Especially part 2 is computationally demanding, it can be skipped to execute part 3.
 
 #### (iii) Open in RStudio and click Run App (Figs. S5–S7).
 
